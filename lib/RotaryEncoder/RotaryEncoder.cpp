@@ -9,38 +9,45 @@ void RotaryEncoder::init() noexcept
     pinMode(std::get<0>(m_pins), INPUT_PULLUP);
     pinMode(std::get<1>(m_pins), INPUT_PULLUP);
     pinMode(std::get<2>(m_pins), INPUT_PULLUP);
-    attachInterruptArg(std::get<0>(m_pins), handleButtonPinInterruptStaticWrapper, this, FALLING); // Attached SW pin
     attachInterruptArg(std::get<1>(m_pins), handlePinAInterruptStaticWrapper, this, RISING); // Attached A pin
 }
 
-int RotaryEncoder::readRotaryState() noexcept
+void RotaryEncoder::registerOnButtonPress(OnButtonPressCb onButtonPressCb)
 {
-    auto position {m_position.load()};
-    auto modifiedPosition{position};
+    m_onButtonPressCb = std::move(onButtonPressCb);
+}
 
-    do 
+bool RotaryEncoder::isButtonPressed() const noexcept
+{
+    return m_buttonPressed;
+}
+
+void RotaryEncoder::updateButtonState() noexcept
+{
+    uint8_t currentState {static_cast<uint8_t>(digitalRead(std::get<0>(m_pins)))};
+
+    if(m_lastButtonState != currentState)
     {
-       modifiedPosition = (position + FULL_ROTATION) % FULL_ROTATION;
-    } while (!m_position.compare_exchange_weak(position, modifiedPosition));
+        m_lastButtonChangeTime = millis();
+    }
 
-    return modifiedPosition;
+    if(millis() - m_lastButtonChangeTime > BUTTON_DEBOUNCING_TIME)
+    {
+        if(!m_buttonPressed && !currentState) // Button was not pressed and new state reads LOW - i.e. that press occur.
+        {
+            m_buttonPressed = HIGH;
+            if(m_onButtonPressCb) m_onButtonPressCb(getAngleDeg());
+        }
+        else if(m_buttonPressed && currentState)
+            m_buttonPressed = LOW;
+    }
 
-    /* SIMPLER VERSION WITH POSSIBLE SKIPS
-    auto position = m_position.load();
-    auto modifiedPosition = (position + FULL_ROTATION) % FULL_ROTATION;
-    m_position.store(modifiedPosition);
-    return modifiedPosition;
-    */
+    m_lastButtonState = currentState;
 }
 
-uint8_t RotaryEncoder::isButtonPressed() noexcept
+int RotaryEncoder::getAngleDeg() const noexcept
 {
-    return m_buttonPressed.exchange(LOW);
-}
-
-void IRAM_ATTR RotaryEncoder::handleButtonPinInterruptStaticWrapper(void* ptr)
-{
-    static_cast<RotaryEncoder*>(ptr)->handleButtonPinInterrupt();
+    return (m_position.load() + FULL_ROTATION) % FULL_ROTATION;
 }
 
 void IRAM_ATTR RotaryEncoder::handlePinAInterruptStaticWrapper(void* ptr)
@@ -48,23 +55,14 @@ void IRAM_ATTR RotaryEncoder::handlePinAInterruptStaticWrapper(void* ptr)
     static_cast<RotaryEncoder*>(ptr)->handlePinAInterrupt();
 }
 
-void IRAM_ATTR RotaryEncoder::handleButtonPinInterrupt()
-{
-    unsigned long now = micros();
-    if(now - m_lastButtonPinInterrupt > (BUTTON_DEBOUNCING_TIME * 1000UL))
-    {
-        m_buttonPressed = HIGH;
-        m_lastButtonPinInterrupt = now;
-    }
-}
-
 void IRAM_ATTR RotaryEncoder::handlePinAInterrupt()
 {
     unsigned long now = micros();
-    if (now - m_lastPinAInterrupt < (ROTARY_DEBOUNCING_TIME * 1000UL))
+    if (now - m_lastPinAInterrupt < ROTARY_DEBOUNCING_TIME)
         return;
 
+     m_lastPinAInterrupt = now;
+
     uint8_t pinB {std::get<2>(m_pins)};
-    int pinBState {digitalRead(pinB)};
-    m_position += (pinBState) ? 1 : -1;
+    m_position.fetch_add((digitalRead(pinB)) ? 1 : -1, std::memory_order_relaxed);
 }

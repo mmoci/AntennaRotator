@@ -1,34 +1,36 @@
 #include <Arduino.h>
-#include "RotaryEncoder.h"
+#include <Wire.h>
+#include <U8g2lib.h>
+#include "AntennaRotatorController.h"
+#include "MotorDrv8871.h"
+
+#define ENCODER_SIMULATION
 
 static constexpr uint8_t SW_PIN = 5;
 static constexpr uint8_t A_PIN = 18;
 static constexpr uint8_t B_PIN = 19;
+static constexpr uint8_t I2C_SCL_PIN = 22;
+static constexpr uint8_t I2C_SDA_PIN = 21;
+static constexpr uint8_t MOTOR_PIN_IN1 = 32;
+static constexpr uint8_t MOTOR_PIN_IN2 = 33;
 
+RotaryEncoder selector{SW_PIN, A_PIN,  B_PIN};
+MagneticEncoder motorSensor{I2C_SCL_PIN, I2C_SCL_PIN};
+AntennaDisplay display{I2C_SCL_PIN, I2C_SCL_PIN};
+MotorDrv8871 driver{MOTOR_PIN_IN1, MOTOR_PIN_IN2};
 
-RotaryEncoder rotary{SW_PIN, A_PIN,  B_PIN};
+AntennaRotatorController controller{selector, motorSensor, driver, display};
 
 void setup() 
 {
     Serial.begin(115200);
-    rotary.init();
+    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+    controller.init();
 }
 
 void loop() 
 {
-    static int lastPos = 0;
+    controller.update();
 
-    int pos = rotary.readRotaryState();
-    if (pos != lastPos)
-    {
-        Serial.printf("Rotary position: %d\n", pos);
-        lastPos = pos;
-    }
-
-    if (rotary.isButtonPressed() == HIGH)
-    {
-        Serial.println("Button pressed!");
-    }
-
-    delay(10); // small delay to reduce Serial spam
+    delay(3); // small delay to reduce Serial spam
 }
