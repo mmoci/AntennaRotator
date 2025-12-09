@@ -26,37 +26,42 @@ void AntennaRotatorController::update() noexcept
     m_selector.updateButtonState();
     m_motorSensor.update();
     adjustPosition();
-    m_display.update(m_selector.getAngleDeg(), m_motorSensor.getAngleDeg());
+    auto selectedAngle{m_selector.getAngleDeg()};
+    auto currentAngle{ m_motorSensor.getAngleDeg()};
+    m_display.update(selectedAngle, currentAngle);
+    Serial.printf("selectedAngle: %d, currentAngle: %d\n", selectedAngle, currentAngle);
 }
 
 void AntennaRotatorController::adjustPosition() noexcept
 {
     auto currentAngle {m_motorSensor.getAngleDeg()};
     auto deltaAngle {(m_targetAngle - currentAngle + RotaryEncoder::FULL_ROTATION) % RotaryEncoder::FULL_ROTATION};
+    int signedDeltaAngle {(deltaAngle > 180) ? (deltaAngle - RotaryEncoder::FULL_ROTATION) : deltaAngle};
+    int absDeltaAngle {std::abs(signedDeltaAngle)};
+    int pwm {map(absDeltaAngle, 0, 180, MotorDriver::MIN_PWM, MotorDriver::MAX_PWM)};
+    
+    pwm = constrain(pwm, MotorDriver::MIN_PWM, MotorDriver::MAX_PWM);
 
     if(deltaAngle <= TOLERANCE)
     {
         m_motor.stop();
-        Serial.println("Motor stopped...");
+        return;
     }
-    else if(deltaAngle <= 180)
+
+    if(signedDeltaAngle > 0)
     {
-        m_motor.rotateCW();
+        m_motor.rotateCW(pwm);
         
         #ifdef ENCODER_SIMULATION
         m_motorSensor.setAngle((++currentAngle + 360) % 360);
         #endif
-        
-        Serial.println("Rotating CW...");
     }
     else
     {
-        m_motor.rotateCCW();
+        m_motor.rotateCCW(pwm);
 
         #ifdef ENCODER_SIMULATION
         m_motorSensor.setAngle((--currentAngle + 360) % 360);
         #endif
-        
-        Serial.println("Rotating CCW...");
     }
 }

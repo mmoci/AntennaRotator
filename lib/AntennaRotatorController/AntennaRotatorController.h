@@ -8,7 +8,7 @@
 class AntennaRotatorController
 {
     private:
-    static constexpr int TOLERANCE{3}; // 3 degrees
+    static constexpr int TOLERANCE{10}; // 10 degrees
 
     RotaryEncoder& m_selector;
     MagneticEncoder& m_motorSensor;

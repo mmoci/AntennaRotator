@@ -4,7 +4,7 @@
 #include "AntennaRotatorController.h"
 #include "MotorDrv8871.h"
 
-#define ENCODER_SIMULATION
+// #define ENCODER_SIMULATION
 
 static constexpr uint8_t SW_PIN = 5;
 static constexpr uint8_t A_PIN = 18;

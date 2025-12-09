@@ -11,9 +11,6 @@ void MagneticEncoder::init() noexcept
 
 void MagneticEncoder::update() noexcept
 {
-    #ifdef ENCODER_SIMULATION
-
-    #else
         Wire.beginTransmission(DEVICE_ADDRESS);
         Wire.write(REGISTER_ADDRESS_HIGH);
         Wire.endTransmission(false);
@@ -26,8 +23,7 @@ void MagneticEncoder::update() noexcept
         int rawValue {(highByte << 8) | lowByte};
         rawValue &= 0xFFF;
 
-        m_angle = (rawValue * FULL_ROTATION / MAX_VALUE_12_BITS);
-    #endif
+        m_angle = (rawValue * FULL_ROTATION / MAX_VALUE_12_BITS) % FULL_ROTATION;
 }
 
 int MagneticEncoder::getAngleDeg() const noexcept

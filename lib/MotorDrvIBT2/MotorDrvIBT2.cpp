@@ -9,18 +9,30 @@ void MotorDrvIBT2::init() noexcept
 {
     pinMode(m_pinRPWM, OUTPUT);
     pinMode(m_pinLPWM, OUTPUT);
+
+    // setup PWM channels
+    ledcSetup(CH_IN1, PWM_FREQ, PWM_RES_BITS);
+    ledcSetup(CH_IN2, PWM_FREQ, PWM_RES_BITS);
+
+    // attach pins to channels
+    ledcAttachPin(m_pinRPWM, CH_IN1);
+    ledcAttachPin(m_pinLPWM, CH_IN2);
+
+    stop();
 }
 
-void MotorDrvIBT2::rotateCW() noexcept
+void MotorDrvIBT2::rotateCW(int pwm) noexcept
 {
-    digitalWrite(m_pinLPWM, LOW);
-    analogWrite(m_pinRPWM, FULL_POWER);
+    Serial.println("Rotate CW (PWM)");
+    ledcWrite(CH_IN2, 0);
+    ledcWrite(CH_IN1, pwm);
 }
 
-void MotorDrvIBT2::rotateCCW() noexcept
+void MotorDrvIBT2::rotateCCW(int pwm) noexcept
 {
-    digitalWrite(m_pinRPWM, LOW);
-    analogWrite(m_pinLPWM, FULL_POWER);
+    Serial.println("Rotate CCW (PWM)");
+    ledcWrite(CH_IN1, 0);
+    ledcWrite(CH_IN2, pwm);
 }
 
 void MotorDrvIBT2::stop() noexcept

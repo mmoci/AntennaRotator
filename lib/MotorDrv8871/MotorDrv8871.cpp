@@ -9,22 +9,35 @@ void MotorDrv8871::init() noexcept
 {
     pinMode(m_pinIn1, OUTPUT);
     pinMode(m_pinIn2, OUTPUT);
+
+    // setup PWM channels
+    ledcSetup(CH_IN1, PWM_FREQ, PWM_RES_BITS);
+    ledcSetup(CH_IN2, PWM_FREQ, PWM_RES_BITS);
+
+    // attach pins to channels
+    ledcAttachPin(m_pinIn1, CH_IN1);
+    ledcAttachPin(m_pinIn2, CH_IN2);
+
+    stop();
 }
 
-void MotorDrv8871::rotateCW() noexcept
+void MotorDrv8871::rotateCW(int pwm) noexcept
 {
-    digitalWrite(m_pinIn2, LOW);
-    analogWrite(m_pinIn1, FULL_POWER);
+    Serial.println("Rotate CW (PWM)");
+    ledcWrite(CH_IN2, 0);
+    ledcWrite(CH_IN1, pwm);
 }
 
-void MotorDrv8871::rotateCCW() noexcept
+void MotorDrv8871::rotateCCW(int pwm) noexcept
 {
-    digitalWrite(m_pinIn1, LOW);
-    analogWrite(m_pinIn2, FULL_POWER);
+    Serial.println("Rotate CCW (PWM)");
+    ledcWrite(CH_IN1, 0);
+    ledcWrite(CH_IN2, pwm);
 }
 
 void MotorDrv8871::stop() noexcept
 {
-    digitalWrite(m_pinIn1, LOW);
-    digitalWrite(m_pinIn2, LOW);
+    Serial.println("Stop (coast)");
+    ledcWrite(CH_IN1, 0);
+    ledcWrite(CH_IN2, 0);
 }
