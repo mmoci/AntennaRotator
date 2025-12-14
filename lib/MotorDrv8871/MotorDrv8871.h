@@ -1,4 +1,5 @@
-#include <Arduino.h>
+#pragma once
+
 #include "MotorDriver.h"
 
 class MotorDrv8871 : public MotorDriver

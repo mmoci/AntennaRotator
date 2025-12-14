@@ -24,19 +24,32 @@ void MotorDrvIBT2::init() noexcept
 void MotorDrvIBT2::rotateCW(int pwm) noexcept
 {
     Serial.println("Rotate CW (PWM)");
-    ledcWrite(CH_IN2, 0);
+    ledcWrite(CH_IN2, LOW);
     ledcWrite(CH_IN1, pwm);
+    m_state = State::CW;
+    m_stoppedStateTimer.reset();
 }
 
 void MotorDrvIBT2::rotateCCW(int pwm) noexcept
 {
     Serial.println("Rotate CCW (PWM)");
-    ledcWrite(CH_IN1, 0);
+    ledcWrite(CH_IN1, LOW);
     ledcWrite(CH_IN2, pwm);
+    m_state = State::CCW;
+    m_stoppedStateTimer.reset();
 }
 
 void MotorDrvIBT2::stop() noexcept
 {
-    digitalWrite(m_pinRPWM, LOW);
-    digitalWrite(m_pinLPWM, LOW);
+    if(isStopped())
+    {
+        m_stoppedStateTimer.update();
+        return;
+    }
+
+    Serial.println("Stop (coast)");
+    ledcWrite(m_pinRPWM, LOW);
+    ledcWrite(m_pinLPWM, LOW);
+    m_stoppedStateTimer.trigger();
+    m_state = State::STOPPED;
 }

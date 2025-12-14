@@ -13,6 +13,7 @@ void AntennaRotatorController::init() noexcept
 
     m_selector.registerOnButtonPress([this](int targetAngle){
         m_targetAngle = targetAngle;
+        m_adjustmentTimer.trigger();
         Serial.println("Button pressed");
 
         #ifdef ENCODER_SIMULATION
@@ -34,6 +35,8 @@ void AntennaRotatorController::update() noexcept
 
 void AntennaRotatorController::adjustPosition() noexcept
 {
+    // ensure timer duration is up-to-date before checking it
+    m_adjustmentTimer.update();
     auto currentAngle {m_motorSensor.getAngleDeg()};
     auto deltaAngle {(m_targetAngle - currentAngle + RotaryEncoder::FULL_ROTATION) % RotaryEncoder::FULL_ROTATION};
     int signedDeltaAngle {(deltaAngle > 180) ? (deltaAngle - RotaryEncoder::FULL_ROTATION) : deltaAngle};
@@ -42,9 +45,13 @@ void AntennaRotatorController::adjustPosition() noexcept
     
     pwm = constrain(pwm, MotorDriver::MIN_PWM, MotorDriver::MAX_PWM);
 
-    if(deltaAngle <= TOLERANCE)
+    if(deltaAngle <= ANGLE_TOLERANCE || m_adjustmentTimer.getDuration() > ADJUSTMENT_TIMEOUT)
     {
         m_motor.stop();
+
+        // If stop state takes more than 5sec we can consider adjustment of position successful (no oscilations), reset adjustment timer
+        if(m_motor.isStopped() && m_motor.stoppedStateDuration() > MOTOR_STOPPED_TIMEOUT)
+            m_adjustmentTimer.reset();
         return;
     }
 
